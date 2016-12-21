@@ -1,0 +1,294 @@
+#!/usr/bin/python
+from Tkinter import *
+from array import *
+import sqlite3
+import datetime
+
+#DATABASE
+database="/Users/mahiraaragon/THISONE.db"
+conn=sqlite3.connect(database)
+c=conn.cursor()
+
+root= Tk()
+
+#GLOBAL VARIABLE - MANY FUNCTIONS NEED ACCESS TO StudentID
+studentid = 0
+
+#MENU WINDOW
+class Menu_window(Frame):
+    
+    def __init__(self,master=None):
+        Frame.__init__(self,master)
+        self.master = master
+        self.init_window()
+    def init_window(self):
+        self.master.title("MENU")
+        self.pack(fill=BOTH,  expand=1 )
+        loginButton = Button(self, text="LOGIN", command=student_info)
+        loginButton.grid(row=0, column=0)
+        test1Button = Button(self, text="BONES", command=test1)
+        test1Button.grid(row=1,column=0)
+        test2Button = Button(self, text="BODY SYSTEMS", command=test2)
+        test2Button.grid(row=2,column=0)
+        gradeButton = Button(self, text = "GRADES", command= results)
+        gradeButton.grid(row=5,column=0)
+        quitButton = Button(self,text="QUIT", command= leaving)
+        quitButton.grid(row=6,column=0)
+        
+#CLOSE connection      
+def leaving():
+    conn.close()
+   
+    
+#LOGIN IN WINDOW
+#StudentID IS AUTOINCREMENTED
+def student_info():
+    window= Toplevel(root)       
+    firstlabel=Label(window, text="First Name: ").grid(row=0)
+    lastlabel=Label(window,text="Last Name: ").grid(row=1)
+    fname=Entry(window)
+    lname=Entry(window)
+    fname.grid(row=0, column=1)
+    lname.grid(row=1, column=1)
+    submitButton = Button(window,text="Submit", command = lambda: student_name(fname, lname)).grid(row=3,column=1)
+    window.title("Student Information")
+
+
+#INSERT STUDENT'S NAME INTO DATABASE AND ASSIGN STUDENTID                                                                                                        
+def student_name(fname,lname):
+    studentfname=fname.get()
+    studentfname = studentfname.upper()
+    studentlname=lname.get()
+    studentlname= studentlname.upper()
+    existinguser="SELECT studentID FROM Student WHERE EXISTS (SELECT fname,lname WHERE fname='" + studentfname + "'" + "AND " +  "lname='" + studentlname + "'" + ")"
+    c.execute(existinguser)
+    studentnum=c.fetchall()
+    if (len(studentnum) == 0):
+        c.execute("INSERT INTO Student (fname,lname) VALUES (" + "'"+ studentfname + "'" +  "," + "'" +studentlname +"'" + ")")
+        c.execute(existinguser)
+        studentnum=c.fetchall()
+        global studentid 
+        studentid=studentnum
+        conn.commit()
+    else:
+        global studentid 
+        studentid= studentnum
+        
+#WINDOW FOR BONES TEST 
+def test1():
+    window= Toplevel(root)
+    window.title("Name the Bone")
+    # DISPLAYING IMAGE 
+    logo=PhotoImage(file="/Users/mahiraaragon/Desktop/Screen_Shot_2016-10-05_at_8(1).gif")
+    widget1=Label(window,image=logo)
+    widget1.grid(row=0,column=10,columnspan=10,rowspan=12)
+    widget1.logo=logo
+    clearbutton1=Button(window,text="Clear",command=lambda: clear1(aarray))
+    clearbutton1.grid(row=13,column=15)
+    submitbutton1=Button(window,text="Submit",command=lambda: submit1(aarray))
+    submitbutton1.grid(row=14,column=15)
+    instructions1 = Label(window, text = "DIRECTIONS:")
+    instructions1.grid(row=16,column=15)
+    instructions2 = Label(window, text = "FOR EACH LETTER")
+    instructions2.grid(row=17,column=15)
+    instructions3 = Label(window, text = "IDENTIFY THE BONE")
+    instructions3.grid(row=18,column=15)
+    #CREATING ENTRY BOXES FOR ANSWERS
+    aarray=[]
+    x='A'
+    r=0
+    while (r<=21):
+        Label(window,text= x).grid(row= r,column=20)
+        aarray.append(Entry(window))
+        aarray[r].grid(row= r, column=21)
+        x=chr(ord(x)+1)
+        r+=1
+        
+#WINDOW FOR SYSTEMS TEST        
+def test2():
+    window=Toplevel(root)
+    window.title("Name the Body System")
+    #DISPLAYING IMAGES
+    logo=PhotoImage(file="/Users/mahiraaragon/Desktop/human-body.gif")
+    instructions1 = Label(window, text = "DIRECTIONS: IDENTIFY THE BODY SYSTEM. (ANSWER FORMAT ______ SYSTEM)")
+    instructions1.grid(row=12, column=15)
+    widget3=Label(window,image=logo)
+    widget3.grid(row=0, column=10, columnspan=10, rowspan=12)
+    widget3.logo=logo
+    clearbutton2=Button(window,text="Clear",command=lambda: clear2(aarray2))
+    clearbutton2.grid(row=9,column=31)
+    submitbutton2=Button(window,text="Submit",command=lambda: submit2(aarray2))
+    submitbutton2.grid(row=10,column=31)
+    #CREATING ENTRY BOXES
+    aarray2=[]
+    x = 'A'
+    r=0    
+    while (r<6):
+        Label(window, text = x).grid(row = r, column = 30) 
+        aarray2.append(Entry(window))
+        aarray2[r].grid(row = r, column = 31)
+        x=chr(ord(x)+1)
+        r+=1
+        
+#THIS FUNCTION HELPS VALUES TO BE PRINTED OR USED EASIER BECAUSE TUPLES GAVE ERRORS  
+def clean_value(studentid):
+    studentnum=str(studentid)
+    studentnum= studentnum.strip('[')
+    studentnum= studentnum.strip(']')
+    studentnum= studentnum.strip('(')
+    studentnum= studentnum.strip(')')
+    studentnum= studentnum.strip(',')
+    studentnum= studentnum.strip('u')
+    studentnum= studentnum.strip("'")
+    studentnum= studentnum.strip('{')
+    studentnum= studentnum.strip('}')
+    return studentnum
+
+#CREATED THIS AS FUNCTION TO MAKE LESS CODE IN ANOTHER FUNCTION 
+def timenow():
+    return ('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()))
+
+#SUMBITTING RESULTS BONES INTO DATABASE.UPDATE TIMES USER HAS TAKEN TEST. MAKE ALL RESPONSES CAPITAL LETTERS. 
+def submit1(aarray):
+    studentnum = clean_value(studentid)
+    now = "'" + timenow() + "'"
+    c.execute("SELECT MAX(attemptID) FROM Responses WHERE studentID=" + studentnum )
+    trial = c.fetchone()
+    attemptnum = clean_value(trial)
+    x= 1
+    if (attemptnum == 'None'):
+        i=0
+        x=1
+        attemptnum = 1
+        c.execute("INSERT INTO Attempts(attemptID, studentID, tname, datenow) VALUES (%s, %s, 'BONES', %s)" % (attemptnum, studentnum, now))
+        while (i<=21):
+            caplet=aarray[i].get()
+            caplet=caplet.upper()
+            caps = "'" + caplet + "'"
+            c.execute("INSERT INTO Responses (studentID, questionID, attemptID, response) VALUES (%s, %s, %s, %s) " % (studentnum, x, attemptnum, caps))
+            conn.commit()
+            i+=1
+            x+=1            
+    else:
+        attempt = int(attemptnum)
+        attempt = attempt + 1
+        c.execute("INSERT INTO Attempts(attemptID, studentID, tname, datenow) VALUES (%s, %s, 'BONES', %s)" % (attemptnum, studentnum, now))
+        i=0
+        x=1
+        while (i<=21):
+            caplet=aarray[i].get()
+            caplet=caplet.upper()
+            caps = "'" + caplet + "'"
+            c.execute("INSERT INTO Responses (studentID, questionID, attemptID, response) VALUES (%s, %s, %s, %s) " % (studentnum, x, attempt, caps))
+            conn.commit()
+            i+=1
+            x+=1
+            
+#SUMBITTING RESULTS FOR SYSTEMS TEST INTO DATABASE.UPDATE TIMES USER HAS TAKEN TEST. MAKE ALL RESPONSES CAPITAL LETTERS.         
+def submit2(aarray):
+    studentnum = clean_value(studentid)
+    now = "'" + timenow() + "'"
+    c.execute("SELECT MAX(attemptID) FROM Responses WHERE studentID=" + studentnum )       
+    studentnum = clean_value(studentid)
+    now = "'" + timenow() + "'"
+    trial = c.fetchone()
+    attemptnum = clean_value(trial)
+    x= 1
+    if (attemptnum == 'None'):
+        i=0
+        x=1
+        attemptnum = 1
+        c.execute("INSERT INTO Attempts(attemptID, studentID, tname, datenow) VALUES (%s, %s, 'SYSTEMS', %s)" % (attemptnum, studentnum, now))
+        while (i<6):
+            caplet=aarray[i].get()
+            caplet=caplet.upper()
+            caps = "'" + caplet + "'"
+            c.execute("INSERT INTO Responses (studentID, questionID, attemptID, response) VALUES (%s, %s, %s, %s) " % (studentnum, x, attemptnum, caps))
+            conn.commit()
+            i+=1
+            x+=1            
+    else:
+        attempt = int(attemptnum)
+        attempt = attempt + 1
+        c.execute("INSERT INTO Attempts(attemptID, studentID, tname, datenow) VALUES (%s, %s, 'SYSTEMS', %s)" % (attemptnum, studentnum, now))
+        i=0
+        x=23
+        while (i<6):
+            caplet=aarray[i].get()
+            caplet=caplet.upper()
+            caps = "'" + caplet + "'"
+            c.execute("INSERT INTO Responses (studentID, questionID, attemptID, response) VALUES (%s, %s, %s, %s) " % (studentnum, x, attempt, caps))
+            conn.commit()
+            i+=1
+            x+=1
+        
+#CLEARING RESPONSES BONES TEST        
+def clear1(aarray):
+    i=0
+    while (i<=21):
+        aarray[i].delete(0, 'end')
+        i+=1
+        
+#CLEARING RESPONSES SYSTEMS TEST       
+def clear2(aarray):
+    i=0
+    while (i<6):
+        aarray[i].delete(0, 'end')
+        i+=1
+        
+#FUNCTION RETURNS GRADE FROM A TEST FROM AN SPECIFIED ATTEMPT. INNER JOIN # 1
+def grademe(attemptnum, testnum):
+    studentnum = clean_value(studentid)
+    if (testnum == 1):
+        c.execute("SELECT COUNT(*) FROM (SELECT Q.questionID, Q.answer FROM Questions Q INNER JOIN (SELECT R.response,R.attemptID, R.studentID ,R.questionID FROM Responses R INNER JOIN Attempts ON R.studentID = Attempts.studentID WHERE Attempts.tname ='BONES' AND R.studentID = %s AND R.attemptID = %s) AR ON AR.questionID = Q.questionID WHERE AR.response = Q.answer)" % (studentnum, attemptnum))
+        gradenum= clean_value(c.fetchone())
+        gradenum= (float(gradenum) / float(22)) * 100
+        return gradenum
+    else:
+        c.execute("SELECT COUNT(*) FROM (SELECT Q.questionID, Q.answer FROM Questions Q INNER JOIN (SELECT R.response,R.attemptID, R.studentID ,R.questionID FROM Responses R INNER JOIN Attempts ON R.studentID = Attempts.studentID WHERE Attempts.tname ='SYSTEMS' AND R.studentID = %s AND R.attemptID = %s) AR ON AR.questionID = Q.questionID WHERE AR.response = Q.answer)" % (studentnum, attemptnum))
+        gradenum= clean_value(c.fetchone())
+        gradenum= (float(gradenum) / float(5)) * 100
+        return gradenum
+    
+#CREATES A WINDOW DISPLAYING USERS GRADE HISTORY. INNER JOIN # 2   
+def results():
+    window= Toplevel(root)
+    studentnum = clean_value(studentid)
+    c.execute("SELECT fname FROM Student WHERE studentID = %s" % studentnum)
+    studentfirstname = clean_value(c.fetchone()) 
+    c.execute("SELECT lname FROM Student WHERE studentID = %s" % studentnum)
+    studentlastname = clean_value(c.fetchone())
+    studentname = "NAME: " + studentfirstname + " " + studentlastname + "     " + "ID: " + studentnum
+    namelabel = Label(window, text = studentname).grid(row=0, column=0)
+    dateheader=Label(window, text = ( "DATE")).grid(row=2, column=0)
+    testheader=Label(window, text = ( "TEST")).grid(row=2, column=1)
+    attemptheader=Label(window, text = ( "ATTEMPT")).grid(row=2, column=2)
+    gradeheader=Label(window, text = ( "GRADE")).grid(row=2, column=3)
+    c.execute("SELECT MAX(attemptID) FROM Attempts WHERE studentID=" + studentnum )
+    trial = clean_value(c.fetchone())
+    attemptnum = int(trial)
+    i=1
+    r=7
+    while (i<= attemptnum):
+        w=r+1
+        c.execute ("SELECT Attempts.attemptID, Attempts.tname, Attempts.datenow FROM Attempts INNER JOIN Student ON Student.studentID = Attempts.studentID WHERE Attempts.studentID = %s AND Attempts.tname = 'BONES' AND Attempts.attemptID = %s" % (studentnum, i))
+        thisinfo = c.fetchall()
+        for row in thisinfo:  
+            Label(window, text = (row[2])).grid(row= r,column=0)
+            Label(window, text = (row[1])).grid(row= r,column=1)
+            Label(window, text = (row[0])).grid(row= r,column=2)
+            Label(window, text = (grademe(i,1))).grid(row= r,column=3)
+        c.execute ("SELECT Attempts.attemptID, Attempts.tname, Attempts.datenow FROM Attempts INNER JOIN Student ON Student.studentID = Attempts.studentID WHERE Attempts.studentID = %s AND Attempts.tname = 'SYSTEMS' AND Attempts.attemptID = %s" % (studentnum, i))
+        thisinfo = c.fetchall()
+        for row in thisinfo:  
+            Label(window, text = (row[2])).grid(row= w,column=0)
+            Label(window, text = (row[1])).grid(row= w,column=1)
+            Label(window, text = (row[0])).grid(row= w,column=2)
+            Label(window, text = (grademe(i,2))).grid(row= w,column=3)
+        i+=1
+        r=w+1
+    window.title("Score History")
+    
+    
+app=Menu_window(root)
+root.mainloop()
