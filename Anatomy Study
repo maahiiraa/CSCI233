@@ -243,7 +243,7 @@ def grademe(attemptnum, testnum):
         c.execute("SELECT COUNT(*) FROM (SELECT Q.questionID, Q.answer FROM Questions Q INNER JOIN (SELECT R.response,R.attemptID, R.studentID ,R.questionID FROM Responses R INNER JOIN Attempts ON R.studentID = Attempts.studentID WHERE Attempts.tname ='BONES' AND R.studentID = %s AND R.attemptID = %s) AR ON AR.questionID = Q.questionID WHERE AR.response = Q.answer)" % (studentnum, attemptnum))
         gradenum= clean_value(c.fetchone())
         gradenum= (float(gradenum) / float(22)) * 100
-        return gradenum
+        return "{:10.2f}".format(gradenum)
     else:
         c.execute("SELECT COUNT(*) FROM (SELECT Q.questionID, Q.answer FROM Questions Q INNER JOIN (SELECT R.response,R.attemptID, R.studentID ,R.questionID FROM Responses R INNER JOIN Attempts ON R.studentID = Attempts.studentID WHERE Attempts.tname ='SYSTEMS' AND R.studentID = %s AND R.attemptID = %s) AR ON AR.questionID = Q.questionID WHERE AR.response = Q.answer)" % (studentnum, attemptnum))
         gradenum= clean_value(c.fetchone())
@@ -259,6 +259,8 @@ def results():
     c.execute("SELECT lname FROM Student WHERE studentID = %s" % studentnum)
     studentlastname = clean_value(c.fetchone())
     studentname = "NAME: " + studentfirstname + " " + studentlastname + "     " + "ID: " + studentnum
+    #c.execute("SELECT studentID FROM Attempts WHERE studentID= %s AND EXISTS (SELECT attemptID FROM Attempts WHERE  attemptID=1)" % studentnum)
+  
     namelabel = Label(window, text = studentname).grid(row=0, column=0)
     dateheader=Label(window, text = ( "DATE")).grid(row=2, column=0)
     testheader=Label(window, text = ( "TEST")).grid(row=2, column=1)
